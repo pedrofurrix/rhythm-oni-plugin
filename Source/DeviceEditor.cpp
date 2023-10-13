@@ -102,20 +102,26 @@ DeviceEditor::DeviceEditor(GenericProcessor* parentNode,
     audioLabel->setColour(Label::textColourId, Colours::darkgrey);
     addAndMakeVisible(audioLabel);
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 8; i++)
     {
-        ElectrodeButton* button = new ElectrodeButton(-1);
+      ElectrodeButton* button = new ElectrodeButton(-1);
         electrodeButtons.add(button);
 
-        button->setBounds(174+i*30, 35, 30, 15);
-        button->setChannelNum(-1);
-        button->setClickingTogglesState (false);
-        button->setToggleState(false, dontSendNotification);
-
+        if (i<4){
+            button->setBounds(174+i*15, 35, 15, 10);
+            button->setChannelNum(-1);
+            button->setClickingTogglesState (false);
+            button->setToggleState(false, dontSendNotification);
+        } else {
+            button->setBounds(174+(i-4)*15, 35+10, 15, 10);
+            button->setChannelNum(-1);
+            button->setClickingTogglesState (false);
+            button->setToggleState(false, dontSendNotification);
+        }
         addAndMakeVisible(button);
         button->addListener(this);
 
-        if (i == 0)
+         if (i == 0)
         {
             button->setTooltip("Audio monitor left channel");
         }
@@ -123,6 +129,7 @@ DeviceEditor::DeviceEditor(GenericProcessor* parentNode,
         {
             button->setTooltip("Audio monitor right channel");
         }
+
     }
 
     // add HW audio parameter selection
@@ -269,19 +276,18 @@ void DeviceEditor::channelStateChanged(Array<int> newChannels)
     }
 
 
-    board->setDACchannel(int(activeAudioChannel), selectedChannel);
-
-    if (selectedChannel > -1)
+  board->setDACchannel(button_on, selectedChannel); // Falta esta parte - commentamos o activeAudioChannel. A forma como podíamos fazer era guardar em variável e usar aqui.
+//Vou usar o button_on
+    if (selectedChannel > -1 && button_on > -1)
     {
-        electrodeButtons[int(activeAudioChannel)]->setToggleState(true, dontSendNotification);
-        electrodeButtons[int(activeAudioChannel)]->setChannelNum(selectedChannel+1);
+        electrodeButtons[button_on]->setToggleState(true, dontSendNotification);
+        electrodeButtons[button_on]->setChannelNum(selectedChannel+1);
     }
     else
     {
-        electrodeButtons[int(activeAudioChannel)]->setChannelNum(selectedChannel);
-        electrodeButtons[int(activeAudioChannel)]->setToggleState(false, dontSendNotification);
+        electrodeButtons[button_on]->setChannelNum(selectedChannel);
+        electrodeButtons[button_on]->setToggleState(false, dontSendNotification);
     }
-
 
 }
 
@@ -298,6 +304,7 @@ void DeviceEditor::buttonClicked(Button* button)
         }
         CoreServices::updateSignalChain(this);
     }
+   /*
     else if (button == electrodeButtons[0] || button == electrodeButtons[1])
     {
         std::vector<bool> channelStates;
@@ -325,6 +332,7 @@ void DeviceEditor::buttonClicked(Button* button)
                 button->getScreenBounds(),
                 nullptr);
     }
+    */
     else if (button == auxButton && !acquisitionIsActive)
     {
         board->enableAuxs(button->getToggleState());
@@ -350,6 +358,39 @@ void DeviceEditor::buttonClicked(Button* button)
     else if (button == ledButton)
     {
         board->enableBoardLeds(button->getToggleState());
+    }
+    else 
+    {
+        for (int j=0; j<8; j++) {
+            if (button == electrodeButtons[j]) {
+                std::vector<bool> channelStates;
+                changeButtonOn(j); //aqui seria para usar lá em cima, mas não sei como vai interagir para ligar os vários butões. Testar
+                for (int i = 0; i < board->getNumDataOutputs(ContinuousChannel::ELECTRODE); i++)
+                {
+                if (electrodeButtons[j]->getChannelNum() -1 == i)
+                    
+                    channelStates.push_back(true);
+                else
+                    channelStates.push_back(false);
+                }
+
+            auto* channelSelector = new PopupChannelSelector(this, channelStates);
+
+            channelSelector->setChannelButtonColour(Colour(0, 174, 239));
+            channelSelector->setMaximumSelectableChannels(1);
+
+            CallOutBox& myBox
+                = CallOutBox::launchAsynchronously(std::unique_ptr<Component>(channelSelector),
+                    button->getScreenBounds(),
+                    nullptr);
+            }
+
+
+
+
+        }
+
+
     }
 
 }
