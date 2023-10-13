@@ -125,7 +125,7 @@ DeviceEditor::DeviceEditor(GenericProcessor* parentNode,
         {
             button->setTooltip("Audio monitor left channel");
         }
-        else
+        else if (i==1)
         {
             button->setTooltip("Audio monitor right channel");
         }
