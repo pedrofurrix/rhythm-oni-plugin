@@ -21,6 +21,18 @@
 
 */
 
+/*
+Code has been modified to provide direct access to 8 selectable channels via the AO board
+Solution developed by:
+Pedro Felix Alves (pedrofalves@i3s.up.pt)
+Paulo Aguiar
+Neuroengineering and Computational Neuroscience Lab
+i3S - Institute for Research and Innovation in Health
+University of Porto, Portugal
+contact email: pauloaguiar@i3s.up.pt
+*/
+
+
 #include "DeviceEditor.h"
 #include "DeviceThread.h"
 
@@ -31,6 +43,7 @@
 using namespace ONIRhythmNode;
 
 #ifdef WIN32
+
 #if (_MSC_VER < 1800) //round doesn't exist on MSVC prior to 2013 version
 inline double round(double x)
 {
@@ -102,15 +115,22 @@ DeviceEditor::DeviceEditor(GenericProcessor* parentNode,
     audioLabel->setColour(Label::textColourId, Colours::darkgrey);
     addAndMakeVisible(audioLabel);
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 8; i++)
     {
         ElectrodeButton* button = new ElectrodeButton(-1);
         electrodeButtons.add(button);
 
-        button->setBounds(174+i*30, 35, 30, 15);
-        button->setChannelNum(-1);
-        button->setClickingTogglesState (false);
-        button->setToggleState(false, dontSendNotification);
+        if (i<4){
+            button->setBounds(174+i*15, 35, 15, 10);
+            button->setChannelNum(-1);
+            button->setClickingTogglesState (false);
+            button->setToggleState(false, dontSendNotification);
+        } else {
+            button->setBounds(174+(i-4)*15, 35+10, 15, 10);
+            button->setChannelNum(-1);
+            button->setClickingTogglesState (false);
+            button->setToggleState(false, dontSendNotification);
+        }
 
         addAndMakeVisible(button);
         button->addListener(this);
@@ -119,7 +139,7 @@ DeviceEditor::DeviceEditor(GenericProcessor* parentNode,
         {
             button->setTooltip("Audio monitor left channel");
         }
-        else
+        else if (i==1)
         {
             button->setTooltip("Audio monitor right channel");
         }
@@ -228,7 +248,7 @@ void DeviceEditor::updateSettings()
         canvas->update();
     }
     
-    for (int i = 0; i < AudioChannel::AvailableAudioChannels; i++)
+    for (int i = 0; i < 8; i++)
     {
         updateAudioChannel(i, electrodeButtons[i]->getChannelNum() - 1);
     }
@@ -273,7 +293,7 @@ void DeviceEditor::channelStateChanged(Array<int> newChannels)
         selectedChannel = newChannels[0];
     }
 
-    updateAudioChannel(int(activeAudioChannel), selectedChannel);
+    updateAudioChannel(int(button_on), selectedChannel);
 
 }
 
@@ -284,7 +304,7 @@ void DeviceEditor::updateAudioChannel(int dacChannel, int channel)
 
     board->setDACchannel(dacChannel, channel);
 
-    if (channel > -1)
+    if (channel > -1 && dacChannel >- 1)
     {
         electrodeButtons[dacChannel]->setToggleState(true, dontSendNotification);
         electrodeButtons[dacChannel]->setChannelNum(channel + 1);
@@ -307,33 +327,6 @@ void DeviceEditor::buttonClicked(Button* button)
             headstageOptionsInterfaces[i]->checkEnabledState();
         }
         CoreServices::updateSignalChain(this);
-    }
-    else if (button == electrodeButtons[0] || button == electrodeButtons[1])
-    {
-        std::vector<bool> channelStates;
-
-        if (button == electrodeButtons[0])
-            activeAudioChannel = LEFT;
-        else
-            activeAudioChannel = RIGHT;
-
-        for (int i = 0; i < board->getNumDataOutputs(ContinuousChannel::ELECTRODE); i++)
-        {
-            if (electrodeButtons[int(activeAudioChannel)]->getChannelNum() -1 == i)
-                channelStates.push_back(true);
-            else
-                channelStates.push_back(false);
-        }
-
-        auto* channelSelector = new PopupChannelSelector(this, channelStates);
-
-        channelSelector->setChannelButtonColour(Colour(0, 174, 239));
-        channelSelector->setMaximumSelectableChannels(1);
-
-        CallOutBox& myBox
-            = CallOutBox::launchAsynchronously(std::unique_ptr<Component>(channelSelector),
-                button->getScreenBounds(),
-                nullptr);
     }
     else if (button == auxButton && !acquisitionIsActive)
     {
@@ -361,8 +354,43 @@ void DeviceEditor::buttonClicked(Button* button)
     {
         board->enableBoardLeds(button->getToggleState());
     }
+    else
+    { 
+    for (int j = 0; j <= 7; j++) 
+    {
+    if (button == electrodeButtons[j]) 
+    {
+        std::vector<bool> channelStates;
+        changeButtonOn(j);
 
-}
+   
+
+        for (int i = 0; i < board->getNumDataOutputs(ContinuousChannel::ELECTRODE); i++)
+        {
+            if (electrodeButtons[j]->getChannelNum() -1 == i)
+                channelStates.push_back(true);
+            else
+                channelStates.push_back(false);
+        }
+
+        if (button == electrodeButtons[0])
+                activeAudioChannel = LEFT;
+            else if (button == electrodeButtons[1])
+                activeAudioChannel = RIGHT;
+
+        auto* channelSelector = new PopupChannelSelector(this, channelStates);
+
+        channelSelector->setChannelButtonColour(Colour(0, 174, 239));
+        channelSelector->setMaximumSelectableChannels(1);
+
+        CallOutBox& myBox
+            = CallOutBox::launchAsynchronously(std::unique_ptr<Component>(channelSelector),
+                button->getScreenBounds(),
+                nullptr);
+    }
+    }
+    }
+    }
 
 void DeviceEditor::startAcquisition()
 {

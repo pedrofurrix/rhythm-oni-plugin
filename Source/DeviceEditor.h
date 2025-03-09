@@ -87,6 +87,15 @@ namespace ONIRhythmNode
 		/** Called by PopupChannelSelector */
 		void channelStateChanged(Array<int> newChannels) override;
 
+		//Change button on to the value of the button that is on
+		/*
+		Function added to enable AO8_plugin
+		*/
+		void changeButtonOn(int number){
+
+			button_on=number;
+		}
+
 	private:
 
 		void updateAudioChannel(int dacChannel, int channel);
@@ -112,7 +121,8 @@ namespace ONIRhythmNode
 		ScopedPointer<Label> audioLabel, ttlSettleLabel, dacHPFlabel;
 
 		bool saveImpedances, measureWhenRecording;
-
+		
+		int button_on;
 		DeviceThread* board;
 		ChannelCanvas* canvas;
 
